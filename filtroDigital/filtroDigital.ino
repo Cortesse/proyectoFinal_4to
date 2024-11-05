@@ -12,6 +12,10 @@ float arraySalida[5] = {0, 0, 0, 0, 0};
 
 unsigned long tiempoMedido = 0; // Tiempo de la ultima muestra
 
+// Variables para el promedio
+float acumuladorSalida = 0; // Acumulador para las salidas
+int contador = 0;            // Contador de muestras
+
 // Funcion para leer los datos en la entrada  y almacenarlos en el arrayEntrada
 void datosEntrada(){
   tiempoMedido = millis();
@@ -19,7 +23,7 @@ void datosEntrada(){
 }
 
 // Función que aplica el filtro digital usando los coeficientes para calcular la salida filtrada
- void filtro(){
+void filtro(){
   float sumatoria = 0;
   // Calcula la primera parte de la sumatoria del filtro, usando el coeficiente y valor de entrada más reciente
   sumatoria = coefEntrada[0] * arrayEntrada[0];
@@ -49,6 +53,8 @@ void pines(){
 void setup() {
   // Llama a la función para configurar los pines
   pines();
+  // Se setea la atenuacion en el pin a 0 dB
+  analogSetPinAttenuation(pinSensor, ADC_0db);
   // Inicializa el tiempo de la última lectura
   tiempoMedido = millis();
   // Configura la comunicación serial a 115200 baudios para enviar datos al monitor
@@ -63,9 +69,23 @@ void loop() {
     datosEntrada();
     // Aplica el filtro digital a los valores de entrada y salida
     filtro();
-    Serial.print(arrayEntrada[0]);
-    Serial.print(" ");
-    Serial.println(arraySalida[0]);
+
+    // Acumula el valor de la salida filtrada y aumenta el contador
+    acumuladorSalida += arraySalida[0];
+    contador++;
+
+    // Si se han acumulado muestras, calcula el promedio y lo imprime
+    if(contador >= 5){
+      float promedioSalida = acumuladorSalida / contador; // Calcula el promedio
+      Serial.print(arrayEntrada[0]);
+      Serial.print(" --- ");
+      Serial.println(promedioSalida); // Imprime el promedio
+
+      // Reinicia el acumulador y el contador para el siguiente promedio
+      acumuladorSalida = 0;
+      contador = 0;
+    }
+
     // Llama a la función para desplazar los valores en los arrays
     corrimientoArray();
   }
