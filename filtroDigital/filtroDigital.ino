@@ -1,10 +1,10 @@
-#define tiempoMuestreo 5 // El tiempo de muestreo se obtiene como: 1/f_muestreo
+#define tiempoMuestreo 0.0028 // El tiempo de muestreo se obtiene como: 1/f_muestreo
 
 const int pinSensor = 34; // pin ADC por el cual se realiza la lectura en el valor analogico del sensor
 
 // Coeficientes de entrada y salida del filtro
-const float coefEntrada[5] = {0.0004175, 0.00167, 0.002505, 0.00167, 0.0004175};
-const float coefSalida[5] = {1, 3.18, -3.86, 2.111, -0.4381};
+const float coefEntrada[5] = {0.000051993, 0.000208, 0.000312, 0.000208, 0.000051993};
+const float coefSalida[5] = {1, 3.531, -4.7, 2.793, -0.6249};
 
 // Coeficientes de entrada y salida del filtro inicializados en cero
 float arrayEntrada[5] = {0, 0, 0, 0, 0};
@@ -15,6 +15,10 @@ unsigned long tiempoMedido = 0; // Tiempo de la ultima muestra
 // Variables para el promedio
 float acumuladorSalida = 0; // Acumulador para las salidas
 int contador = 0;            // Contador de muestras
+float Muestra = 0;
+float promedioSalida =0;
+float peso = 0;
+bool flag = 1;
 
 // Funcion para leer los datos en la entrada  y almacenarlos en el arrayEntrada
 void datosEntrada(){
@@ -75,16 +79,26 @@ void loop() {
     contador++;
 
     // Si se han acumulado muestras, calcula el promedio y lo imprime
-    if(contador >= 5){
-      float promedioSalida = acumuladorSalida / contador; // Calcula el promedio
+    if(contador >= 10){
+      promedioSalida = acumuladorSalida / contador; // Calcula el promedio
+      peso = ((promedioSalida/4095.00)-Muestra)*(100);
+      if(flag == 1 && millis() ){
+        Muestra = peso;
+        flag = 0;
+      }
+      Serial.print(Muestra);
+      Serial.print(" --- ");
       Serial.print(arrayEntrada[0]);
       Serial.print(" --- ");
-      Serial.println(promedioSalida); // Imprime el promedio
+      Serial.print(promedioSalida/4095, 2);
+      Serial.print(" --- ");
+      Serial.println(peso, 2); // Imprime el promedio
 
       // Reinicia el acumulador y el contador para el siguiente promedio
       acumuladorSalida = 0;
       contador = 0;
     }
+    
 
     // Llama a la función para desplazar los valores en los arrays
     corrimientoArray();
