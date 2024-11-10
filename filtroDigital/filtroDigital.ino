@@ -1,106 +1,99 @@
-#define tiempoMuestreo 0.0028 // El tiempo de muestreo se obtiene como: 1/f_muestreo
+#include "esp_adc_cal.h"
+#define tiempoMuestreo 2.8 // Tiempo en milisegundos
 
-const int pinSensor = 34; // pin ADC por el cual se realiza la lectura en el valor analogico del sensor
+const int pinSensor = 34; // Pin ADC para la lectura analógica del sensor
+esp_adc_cal_characteristics_t *adc_chars; 
+const adc_unit_t unit = ADC_UNIT_1;       
+const adc_bits_width_t width = ADC_WIDTH_BIT_12;
 
-// Coeficientes de entrada y salida del filtro
 const float coefEntrada[5] = {0.000051993, 0.000208, 0.000312, 0.000208, 0.000051993};
 const float coefSalida[5] = {1, 3.531, -4.7, 2.793, -0.6249};
+double arrayEntrada[5] = {0, 0, 0, 0, 0};
+double arraySalida[5] = {0, 0, 0, 0, 0};
 
-// Coeficientes de entrada y salida del filtro inicializados en cero
-float arrayEntrada[5] = {0, 0, 0, 0, 0};
-float arraySalida[5] = {0, 0, 0, 0, 0};
-
-unsigned long tiempoMedido = 0; // Tiempo de la ultima muestra
+unsigned long tiempoMedido = 0; // Tiempo de la última muestra
 
 // Variables para el promedio
+bool flag = true;
 float acumuladorSalida = 0; // Acumulador para las salidas
 int contador = 0;            // Contador de muestras
-float Muestra = 0;
-float promedioSalida =0;
+float filtradoADC = 0;
 float peso = 0;
-bool flag = 1;
+float muestra = 0;
 
-// Funcion para leer los datos en la entrada  y almacenarlos en el arrayEntrada
-void datosEntrada(){
+// Función para leer los datos en la entrada y almacenarlos en arrayEntrada
+void datosEntrada() {
   tiempoMedido = millis();
-  arrayEntrada[0] = float(analogRead(pinSensor));
+  arrayEntrada[0] = esp_adc_cal_raw_to_voltage(analogRead(pinSensor), adc_chars);
 }
 
 // Función que aplica el filtro digital usando los coeficientes para calcular la salida filtrada
-void filtro(){
-  float sumatoria = 0;
-  // Calcula la primera parte de la sumatoria del filtro, usando el coeficiente y valor de entrada más reciente
-  sumatoria = coefEntrada[0] * arrayEntrada[0];
-  // Ciclo para sumar el resto de términos con los coeficientes de entrada y salida
-  for(int i = 1; i < 5; i++){
+void filtro() {
+  float sumatoria = coefEntrada[0] * arrayEntrada[0];
+  for(int i = 1; i < 5; i++) {
     sumatoria += coefEntrada[i] * arrayEntrada[i] + coefSalida[i] * arraySalida[i];
   }
-  // Guarda el resultado de la sumatoria en la primera posición de arraySalida, que es la salida filtrada más reciente
   arraySalida[0] = sumatoria;
 }
 
-// Función para desplazar los valores en los arrays de entrada y salida
-void corrimientoArray(){
-  // Desplaza cada valor a la siguiente posición, para mantener los últimos valores de las entradas y salidas
-  for(int i = 4; i > 0; i--){
-    arraySalida[i] = arraySalida[i-1];
-    arrayEntrada[i] = arrayEntrada[i-1];
+// Función para calcular el peso y el valor filtrado
+void calculoPeso(float salidaADC) {
+  if(flag && millis() > 2000) {
+    acumuladorSalida += salidaADC;
+    contador++;
+    if(contador >= 50 && millis() > 5000) {
+      muestra = acumuladorSalida / contador;
+      flag = false;
+    }
   }
+
+  filtradoADC = ((salidaADC - muestra) * (0.9 / 4095));
+  peso = filtradoADC * 166;
 }
 
-// Función para inicializar el pin del sensor como entrada
-void pines(){
-  pinMode(pinSensor, INPUT);
+// Función para desplazar los valores en los arrays de entrada y salida
+void corrimientoArray() {
+  for(int i = 4; i > 0; i--) {
+    arraySalida[i] = arraySalida[i - 1];
+    arrayEntrada[i] = arrayEntrada[i - 1];
+  }
 }
 
 // Configuración inicial del programa
 void setup() {
-  // Llama a la función para configurar los pines
-  pines();
-  // Se setea la atenuacion en el pin a 0 dB
+  Serial.begin(115200); // Configura la comunicación serial
+  pinMode(pinSensor, INPUT);
+  analogReadResolution(12);
   analogSetPinAttenuation(pinSensor, ADC_0db);
-  // Inicializa el tiempo de la última lectura
+
+  adc_chars = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
+  esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, ADC_ATTEN_DB_0, width, 1100, adc_chars);
+
   tiempoMedido = millis();
-  // Configura la comunicación serial a 115200 baudios para enviar datos al monitor
-  Serial.begin(115200);
 }
 
 // Bucle principal del programa
 void loop() {
   // Verifica si ha pasado el tiempo de muestreo desde la última lectura
-  if(millis() - tiempoMedido >= tiempoMuestreo){
+  if(millis() - tiempoMedido >= tiempoMuestreo) {
     // Llama a la función para tomar una nueva lectura de entrada
     datosEntrada();
-    // Aplica el filtro digital a los valores de entrada y salida
     filtro();
-
-    // Acumula el valor de la salida filtrada y aumenta el contador
-    acumuladorSalida += arraySalida[0];
-    contador++;
-
-    // Si se han acumulado muestras, calcula el promedio y lo imprime
-    if(contador >= 10){
-      promedioSalida = acumuladorSalida / contador; // Calcula el promedio
-      peso = ((promedioSalida/4095.00)-Muestra)*(100);
-      if(flag == 1 && millis() ){
-        Muestra = peso;
-        flag = 0;
-      }
-      Serial.print(Muestra);
-      Serial.print(" --- ");
-      Serial.print(arrayEntrada[0]);
-      Serial.print(" --- ");
-      Serial.print(promedioSalida/4095, 2);
-      Serial.print(" --- ");
-      Serial.println(peso, 2); // Imprime el promedio
-
-      // Reinicia el acumulador y el contador para el siguiente promedio
-      acumuladorSalida = 0;
-      contador = 0;
-    }
-    
-
-    // Llama a la función para desplazar los valores en los arrays
+    calculoPeso(arraySalida[0]);
     corrimientoArray();
+
+    // Imprimir resultados en el monitor serial
+    Serial.print("Señal entrada: ");
+    Serial.print(arrayEntrada[0]);
+    Serial.print(" --- Señal salida: ");
+    Serial.print(arraySalida[0]);
+    Serial.print(" --- Muestra: ");
+    Serial.print(muestra, 3);
+    Serial.print(" --- salidaADC-Muestra: ");
+    Serial.print(arraySalida[0] - muestra, 3);
+    Serial.print(" --- FiltradoADC: ");
+    Serial.print(filtradoADC, 3);
+    Serial.print(" --- Peso: ");
+    Serial.println(peso, 3);
   }
 }

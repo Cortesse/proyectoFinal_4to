@@ -4,34 +4,6 @@ float ConvertirVaKg(float voltaje) {
   return voltaje * kgxV;
 }
 
-/*void ResponderCliente(WiFiClient& cliente, float peso) {
-    cliente.println("HTTP/1.1 200 OK");
-    cliente.println("Content-type:text/html");
-    cliente.println();
-    cliente.print("<!DOCTYPE html><html lang='es'><head>");
-    cliente.print("<meta charset='UTF-8'>");
-    cliente.print("<meta name='viewport' content='width=device-width, initial-scale=1.0'>");
-    cliente.print("<title>Balanza Digital</title>");
-    
-    // Meta refresh para actualizar la página cada 5 segundos
-    cliente.print("<meta http-equiv='refresh' content='5'>");
-
-    cliente.print("<style>");
-    cliente.print("body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #ffcccc; }"); // Fondo claro
-    cliente.print(".container { text-align: center; background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); max-width: 90%; }"); // Contenedor en tono claro
-    cliente.print("h1 { color: #c72c41; margin-bottom: 20px; }"); // Tono rojo oscuro para el título
-    cliente.print(".peso { font-weight: bold; color: #a72a38; font-size: 48px; margin: 20px 0; }"); // Peso en un tono rojo medio
-    cliente.print("</style>");
-    
-    cliente.print("</head><body>");
-    cliente.print("<div class='container'>");
-    cliente.print("<h1>Balanza Digital</h1>"); // Título
-    cliente.print("<p class='peso'>"); // Valor del peso
-    cliente.print(peso);
-    cliente.print(" kg</p>"); // Imprimir el peso en kg
-    cliente.print("</div></body></html>");
-}*/
-
 void ResponderCliente(WiFiClient client, float peso) {
   // Enviar cabeceras HTTP para indicar contenido HTML
   client.println("HTTP/1.1 200 OK");
