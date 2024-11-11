@@ -12,7 +12,7 @@ WiFiMulti wifiMulti;
 
 const int pinSensor = 34;
 
-const uint32_t tiempoEsperaWiFi = 1000;
+const uint32_t tiempoEsperaWiFi = 5000;
 
 unsigned long tiempoActual = 0;
 unsigned long tiempoAnterior = 0;
@@ -42,7 +42,7 @@ float muestra = 0;
 
 void datosEntrada(){
   tiempoMedido = millis();
-  arrayEntrada[0] = esp_adc_cal_raw_to_voltage(float(analogRead(pinSensor)), adc_chars);
+  arrayEntrada[0] = esp_adc_cal_raw_to_voltage(float(analogRead(pinSensor)), adc_chars)/1000.00;
 }
 
 void filtro(){
@@ -63,8 +63,27 @@ void calculoPeso(float salidaADC){
       flag = false;
     }
   }   
-  filtradoADC = ((salidaADC - muestra) * (0.9 / 4095));
-  peso = filtradoADC * 166;
+  
+  filtradoADC = (salidaADC - muestra);
+
+  if(filtradoADC <= 0){
+    filtradoADC = 0;
+  }
+
+  peso = (filtradoADC * 36);
+
+  /*Serial.print("Señal entrada: ");
+  Serial.print(arrayEntrada[0]);
+  Serial.print(" --- Señal salida: ");
+  Serial.print(arraySalida[0]);
+  Serial.print(" --- Muestra: ");
+  Serial.print(muestra, 2);
+  Serial.print(" --- salidaADC-Muestra: ");
+  Serial.print(arraySalida[0] - muestra, 2);
+  Serial.print(" --- FiltradoADC: ");
+  Serial.print(filtradoADC, 2);
+  Serial.print(" --- Peso: ");
+  Serial.println(peso, 2);*/
 }
 
 void corrimientoArray(){
@@ -113,7 +132,7 @@ void responderCliente(WiFiClient cliente, float peso) {
   cliente.println("    document.getElementById('peso').innerText = data + ' kg';");
   cliente.println("  });");
   cliente.println("}");
-  cliente.println("setInterval(actualizarPeso, 1000);");
+  cliente.println("setInterval(actualizarPeso, 500);");
   cliente.println("</script>");
   cliente.println("</body>");
   cliente.println("</html>");
@@ -131,13 +150,17 @@ void setup() {
   adc_chars = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
   esp_adc_cal_characterize(unit, ADC_ATTEN_DB_0, width, 1100, adc_chars);
 
-  wifiMulti.addAP(ssid_1, password_1);
+  wifiMulti.addAP(ssid_5, password_5);
 
   WiFi.mode(WIFI_STA);
   while (wifiMulti.run(tiempoEsperaWiFi) != WL_CONNECTED) {
     Serial.print(".");
   }
   Serial.println("\nConectado a WiFi");
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
   servidor.begin();
   tiempoMedido = millis();
 }
@@ -150,18 +173,6 @@ void loop() {
     filtro();
     calculoPeso(arraySalida[0]);
     corrimientoArray();
-    Serial.print("Señal entrada: ");
-    Serial.print(arrayEntrada[0]);
-    Serial.print(" --- Señal salida: ");
-    Serial.print(arraySalida[0]);
-    Serial.print(" --- Muestra: ");
-    Serial.print(muestra, 3);
-    Serial.print(" --- salidaADC-Muestra: ");
-    Serial.print(arraySalida[0] - muestra, 3);
-    Serial.print(" --- FiltradoADC: ");
-    Serial.print(filtradoADC, 3);
-    Serial.print(" --- Peso: ");
-    Serial.println(peso, 3);
   }
 
   WiFiClient cliente = servidor.available();
@@ -176,7 +187,7 @@ void loop() {
           cliente.println("Content-type: text/plain");
           cliente.println("Connection: close");
           cliente.println();
-          cliente.print(peso);
+          cliente.print(peso, 3);
           break;
         } else if (LineaActual.indexOf("GET /") >= 0) {
           responderCliente(cliente, peso);

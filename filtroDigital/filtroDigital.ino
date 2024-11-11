@@ -24,7 +24,7 @@ float muestra = 0;
 // Función para leer los datos en la entrada y almacenarlos en arrayEntrada
 void datosEntrada() {
   tiempoMedido = millis();
-  arrayEntrada[0] = esp_adc_cal_raw_to_voltage(analogRead(pinSensor), adc_chars);
+  arrayEntrada[0] = (esp_adc_cal_raw_to_voltage(analogRead(pinSensor), adc_chars))/1000.00;
 }
 
 // Función que aplica el filtro digital usando los coeficientes para calcular la salida filtrada
@@ -47,8 +47,26 @@ void calculoPeso(float salidaADC) {
     }
   }
 
-  filtradoADC = ((salidaADC - muestra) * (0.9 / 4095));
-  peso = filtradoADC * 166;
+  filtradoADC = (salidaADC - muestra);
+
+  if(filtradoADC <= 0){
+    filtradoADC = 0;
+  }
+
+  peso = (filtradoADC * 36);
+
+  Serial.print("Señal entrada: ");
+  Serial.print(arrayEntrada[0]);
+  Serial.print(" --- Señal salida: ");
+  Serial.print(arraySalida[0]);
+  Serial.print(" --- Muestra: ");
+  Serial.print(muestra, 2);
+  Serial.print(" --- salidaADC-Muestra: ");
+  Serial.print(arraySalida[0] - muestra, 2);
+  Serial.print(" --- FiltradoADC: ");
+  Serial.print(filtradoADC, 2);
+  Serial.print(" --- Peso: ");
+  Serial.println(peso, 2);
 }
 
 // Función para desplazar los valores en los arrays de entrada y salida
@@ -81,19 +99,5 @@ void loop() {
     filtro();
     calculoPeso(arraySalida[0]);
     corrimientoArray();
-
-    // Imprimir resultados en el monitor serial
-    Serial.print("Señal entrada: ");
-    Serial.print(arrayEntrada[0]);
-    Serial.print(" --- Señal salida: ");
-    Serial.print(arraySalida[0]);
-    Serial.print(" --- Muestra: ");
-    Serial.print(muestra, 3);
-    Serial.print(" --- salidaADC-Muestra: ");
-    Serial.print(arraySalida[0] - muestra, 3);
-    Serial.print(" --- FiltradoADC: ");
-    Serial.print(filtradoADC, 3);
-    Serial.print(" --- Peso: ");
-    Serial.println(peso, 3);
   }
 }

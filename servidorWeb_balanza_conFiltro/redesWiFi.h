@@ -14,6 +14,10 @@ const char* password_3 = "holachau123";
 const char* ssid_4 = "Utn_WifiPass";
 const char* password_4 = "WifiPass**";
 
+// EMI
+const char* ssid_5 = "SF";
+const char* password_5 ="Nrv12345";
+
 const String Pagina = R"====(HTTP/1.1 200 OK
 Content-Type: text/html
 
