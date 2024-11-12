@@ -11,7 +11,6 @@ WiFiServer servidor(80);         // Crea el servidor web en el puerto 80
 WiFiMulti wifiMulti;
 
 const int pinSensor = 34;
-
 const uint32_t tiempoEsperaWiFi = 5000;
 
 unsigned long tiempoActual = 0;
@@ -38,56 +37,48 @@ float filtradoADC = 0;
 float peso = 0;
 float muestra = 0;
 
+/* Configuración de IP estática */
+IPAddress ip(192, 168, 213, 115);      // IP deseada
+IPAddress gateway(192, 168, 213, 27);   // Puerta de enlace de la red
+IPAddress subnet(255, 255, 255, 0);  // Máscara de subred
+
 /* ----- FUNCIONES FILTRO ----- */
 
-void datosEntrada(){
+void datosEntrada() {
   tiempoMedido = millis();
   arrayEntrada[0] = esp_adc_cal_raw_to_voltage(float(analogRead(pinSensor)), adc_chars)/1000.00;
 }
 
-void filtro(){
+void filtro() {
   float sumatoria = 0;
   sumatoria = coefEntrada[0] * arrayEntrada[0];
-  for(int i = 1; i < 5; i++){
+  for(int i = 1; i < 5; i++) {
     sumatoria += coefEntrada[i] * arrayEntrada[i] + coefSalida[i] * arraySalida[i];
   }
   arraySalida[0] = sumatoria;
 }
 
-void calculoPeso(float salidaADC){
-  if(flag && millis() > 2000){
+void calculoPeso(float salidaADC) {
+  if(flag && millis() > 2000) {
     acumuladorSalida += salidaADC;
     contador++;
-    if(contador >= 50 && millis() > 5000){
+    if(contador >= 50 && millis() > 5000) {
       muestra = acumuladorSalida / contador;
       flag = false;
     }
   }   
-  
+
   filtradoADC = (salidaADC - muestra);
 
-  if(filtradoADC <= 0){
+  if(filtradoADC <= 0) {
     filtradoADC = 0;
   }
 
   peso = (filtradoADC * 36);
-
-  /*Serial.print("Señal entrada: ");
-  Serial.print(arrayEntrada[0]);
-  Serial.print(" --- Señal salida: ");
-  Serial.print(arraySalida[0]);
-  Serial.print(" --- Muestra: ");
-  Serial.print(muestra, 2);
-  Serial.print(" --- salidaADC-Muestra: ");
-  Serial.print(arraySalida[0] - muestra, 2);
-  Serial.print(" --- FiltradoADC: ");
-  Serial.print(filtradoADC, 2);
-  Serial.print(" --- Peso: ");
-  Serial.println(peso, 2);*/
 }
 
-void corrimientoArray(){
-  for(int i = 4; i > 0; i--){
+void corrimientoArray() {
+  for(int i = 4; i > 0; i--) {
     arraySalida[i] = arraySalida[i-1];
     arrayEntrada[i] = arrayEntrada[i-1];
   }
@@ -153,6 +144,7 @@ void setup() {
   wifiMulti.addAP(ssid_5, password_5);
 
   WiFi.mode(WIFI_STA);
+  WiFi.config(ip, gateway, subnet);  // Asigna la IP estática
   while (wifiMulti.run(tiempoEsperaWiFi) != WL_CONNECTED) {
     Serial.print(".");
   }
@@ -198,3 +190,4 @@ void loop() {
     cliente.stop();
   }
 }
+
