@@ -56,7 +56,7 @@ void calculoPeso(float salidaADC) {
   }else{
     peso = (filtradoADC * (30/1.1));
     peso = (35.8983)*filtradoADC-0.04708;
-    peso = 0.1551 * pow(peso, 3) + 0.8678 * pow(peso, 2) + 0.2266 * peso - 0.0273;
+    //peso = 0.1551 * pow(peso, 3) + 0.8678 * pow(peso, 2) + 0.2266 * peso - 0.0273;
     //peso = (0.9756)*peso + 0.1536;
   }
 
