@@ -1,4 +1,4 @@
-#include "esp_adc_cal.h"
+#include <esp_adc_cal.h>
 #define tiempoMuestreo 2.8 // Tiempo en milisegundos
 
 const int pinSensor = 34; // Pin ADC para la lectura analógica del sensor
@@ -24,7 +24,7 @@ float muestra = 0;
 // Función para leer los datos en la entrada y almacenarlos en arrayEntrada
 void datosEntrada() {
   tiempoMedido = millis();
-  arrayEntrada[0] = (esp_adc_cal_raw_to_voltage(analogRead(pinSensor), adc_chars))/1000.00;
+  arrayEntrada[0] = esp_adc_cal_raw_to_voltage(float(analogRead(pinSensor)), adc_chars)/1000.00;
 }
 
 // Función que aplica el filtro digital usando los coeficientes para calcular la salida filtrada
@@ -38,22 +38,29 @@ void filtro() {
 
 // Función para calcular el peso y el valor filtrado
 void calculoPeso(float salidaADC) {
-  if(flag && millis() > 2000) {
+  if(flag && millis() > 4000) {
     acumuladorSalida += salidaADC;
     contador++;
-    if(contador >= 50 && millis() > 5000) {
+    if(contador >= 75 && millis() > 5000) {
       muestra = acumuladorSalida / contador;
       flag = false;
     }
   }
 
   filtradoADC = (salidaADC - muestra);
+  filtradoADC =(0.9903)*filtradoADC + 0.0071;
 
-  if(filtradoADC <= 0){
+  if(filtradoADC <= 0.010){
     filtradoADC = 0;
+    peso = 0;
+  }else{
+    peso = (filtradoADC * (30/1.1));
+    peso = (35.8983)*filtradoADC-0.04708;
+    peso = 0.1551 * pow(peso, 3) + 0.8678 * pow(peso, 2) + 0.2266 * peso - 0.0273;
+    //peso = (0.9756)*peso + 0.1536;
   }
 
-  peso = (filtradoADC * 36);
+  
 
   Serial.print("Señal entrada: ");
   Serial.print(arrayEntrada[0]);
@@ -79,8 +86,8 @@ void corrimientoArray() {
 
 // Configuración inicial del programa
 void setup() {
-  Serial.begin(115200); // Configura la comunicación serial
-  pinMode(pinSensor, INPUT);
+  Serial.begin(9600); // Configura la comunicación serial
+  pinMode(pinSensor, INPUT_PULLDOWN);
   analogReadResolution(12);
   analogSetPinAttenuation(pinSensor, ADC_0db);
 
